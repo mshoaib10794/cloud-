@@ -1,0 +1,6 @@
+{
+  "name": "Lab-portal-app",
+  "description": "Lab-portal-app - Enterprise cloud laboratory information management and pathology portal system for diagnostic labs, featuring patient registration, test catalog with sub-headings, sample barcode tracking, automated result entry with reference range flagging, and PKR billing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
