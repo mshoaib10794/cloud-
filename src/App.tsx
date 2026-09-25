@@ -8,7 +8,8 @@ import {
   INITIAL_TEST_CATALOG,
   INITIAL_PATIENTS,
   INITIAL_ORDERS,
-  INITIAL_REPORTS
+  INITIAL_REPORTS,
+  INITIAL_APPOINTMENTS
 } from './data/initialCatalog';
 import {
   Patient,
@@ -19,7 +20,9 @@ import {
   PaymentMethod,
   LabProfile,
   UserAccount,
-  INITIAL_STAFF_ACCOUNTS
+  INITIAL_STAFF_ACCOUNTS,
+  LabAppointment,
+  AppointmentStatus
 } from './types/lims';
 import { DashboardOverview } from './components/DashboardOverview';
 import { PatientsView } from './components/PatientsView';
@@ -27,14 +30,16 @@ import { LabOrdersView } from './components/LabOrdersView';
 import { BillingView } from './components/BillingView';
 import { TestCatalogView } from './components/TestCatalogView';
 import { TestResultsView } from './components/TestResultsView';
+import { AppointmentSchedulerView } from './components/AppointmentSchedulerView';
 import { NewOrderModal } from './components/NewOrderModal';
+import { NewAppointmentModal } from './components/NewAppointmentModal';
 import { DiagnosticReportModal } from './components/DiagnosticReportModal';
 import { BillingReceiptModal } from './components/BillingReceiptModal';
 import { LabSettingsModal } from './components/LabSettingsModal';
 import { LoginView } from './components/LoginView';
 import { StaffManagementModal } from './components/StaffManagementModal';
 
-type NavTab = 'dashboard' | 'patients' | 'orders' | 'billing' | 'catalog' | 'results';
+type NavTab = 'dashboard' | 'patients' | 'appointments' | 'orders' | 'billing' | 'catalog' | 'results';
 
 const DEFAULT_LAB_PROFILE: LabProfile = {
   labName: 'Lab-Portal-App',
@@ -92,6 +97,15 @@ export default function App() {
       return saved ? JSON.parse(saved) : INITIAL_REPORTS;
     } catch {
       return INITIAL_REPORTS;
+    }
+  });
+
+  const [appointments, setAppointments] = useState<LabAppointment[]>(() => {
+    try {
+      const saved = localStorage.getItem('hcloud_appointments');
+      return saved ? JSON.parse(saved) : INITIAL_APPOINTMENTS;
+    } catch {
+      return INITIAL_APPOINTMENTS;
     }
   });
 
@@ -205,6 +219,14 @@ export default function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('hcloud_appointments', JSON.stringify(appointments));
+    } catch (e) {
+      console.error('Failed to save appointments', e);
+    }
+  }, [appointments]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('hcloud_lab_profile', JSON.stringify(labProfile));
     } catch (e) {
       console.error('Failed to save lab profile', e);
@@ -214,8 +236,49 @@ export default function App() {
   // Global Modals State
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
+  const [appointmentInitialPatientId, setAppointmentInitialPatientId] = useState<string | undefined>(undefined);
+  const [orderModalPatientId, setOrderModalPatientId] = useState<string | undefined>(undefined);
+  const [orderModalTests, setOrderModalTests] = useState<string[] | undefined>(undefined);
+  const [orderModalNotes, setOrderModalNotes] = useState<string | undefined>(undefined);
+  const [activeAppointmentToCheckIn, setActiveAppointmentToCheckIn] = useState<LabAppointment | null>(null);
   const [activeReportOrder, setActiveReportOrder] = useState<LabOrder | null>(null);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<LabOrder | null>(null);
+
+  // Handlers for Appointments
+  const handleSaveAppointment = (newAppointment: LabAppointment, newPatient?: Patient) => {
+    if (newPatient) {
+      setPatients(prev => [newPatient, ...prev]);
+    }
+    setAppointments(prev => [newAppointment, ...prev]);
+  };
+
+  const handleUpdateAppointmentStatus = (appointmentId: string, status: AppointmentStatus) => {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? { ...a, status } : a)
+    );
+  };
+
+  const handleCheckInToOrder = (appointment: LabAppointment) => {
+    setOrderModalPatientId(appointment.patientId);
+    setOrderModalTests(appointment.requestedTests);
+    setOrderModalNotes(`From Appointment ${appointment.id}: ${appointment.notes || ''}`);
+    setActiveAppointmentToCheckIn(appointment);
+    setShowNewOrderModal(true);
+  };
+
+  const openNewAppointmentModal = (patientId?: string) => {
+    setAppointmentInitialPatientId(patientId);
+    setShowNewAppointmentModal(true);
+  };
+
+  const openGenericNewOrderModal = () => {
+    setOrderModalPatientId(undefined);
+    setOrderModalTests(undefined);
+    setOrderModalNotes(undefined);
+    setActiveAppointmentToCheckIn(null);
+    setShowNewOrderModal(true);
+  };
 
   // Handlers for Orders & Patients
   const handleSaveNewOrder = (newOrder: LabOrder, newPatient?: Patient) => {
@@ -224,6 +287,21 @@ export default function App() {
     }
     setOrders(prev => [newOrder, ...prev]);
     setActiveReceiptOrder(newOrder);
+
+    // If order was created from a checked-in appointment, link and complete it
+    if (activeAppointmentToCheckIn) {
+      setAppointments(prev =>
+        prev.map(a =>
+          a.id === activeAppointmentToCheckIn.id
+            ? { ...a, status: 'Completed', convertedToOrderId: newOrder.id }
+            : a
+        )
+      );
+      setActiveAppointmentToCheckIn(null);
+    }
+    setOrderModalPatientId(undefined);
+    setOrderModalTests(undefined);
+    setOrderModalNotes(undefined);
   };
 
   const handleAddPatient = (newPatient: Patient) => {
@@ -325,6 +403,7 @@ export default function App() {
         const data = JSON.parse(event.target?.result as string);
         if (data.patients && Array.isArray(data.patients)) setPatients(data.patients);
         if (data.orders && Array.isArray(data.orders)) setOrders(data.orders);
+        if (data.appointments && Array.isArray(data.appointments)) setAppointments(data.appointments);
         if (data.catalog && Array.isArray(data.catalog)) setCatalog(data.catalog);
         if (data.reports && Array.isArray(data.reports)) setReports(data.reports);
         if (data.labProfile) setLabProfile(data.labProfile);
@@ -370,6 +449,7 @@ export default function App() {
     if (confirm('Reset system to default sample data? All newly added orders/patients will be reset.')) {
       setPatients(INITIAL_PATIENTS);
       setOrders(INITIAL_ORDERS);
+      setAppointments(INITIAL_APPOINTMENTS);
       setCatalog(INITIAL_TEST_CATALOG);
       setReports(INITIAL_REPORTS);
       setLabProfile(DEFAULT_LAB_PROFILE);
@@ -390,6 +470,10 @@ export default function App() {
       />
     );
   }
+
+  const activeAppointmentsCount = appointments.filter(
+    a => a.status === 'Scheduled' || a.status === 'Confirmed'
+  ).length;
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
@@ -431,6 +515,17 @@ export default function App() {
             }`}
           >
             1. Patients ({patients.length})
+          </button>
+          <button
+            onClick={() => setCurrentTab('appointments')}
+            className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+              currentTab === 'appointments' ? 'bg-teal-50 text-teal-800 font-bold' : 'hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <span>Appointments</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-900 font-mono text-[10px] font-bold">
+              {activeAppointmentsCount}
+            </span>
           </button>
           <button
             onClick={() => setCurrentTab('orders')}
@@ -495,6 +590,7 @@ export default function App() {
                 system: 'Lab-Portal-App Clinical LIMS',
                 patients,
                 orders,
+                appointments,
                 catalog,
                 reports,
                 labProfile,
@@ -573,7 +669,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setShowNewOrderModal(true)}
+            onClick={openGenericNewOrderModal}
             className="px-3 sm:px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -604,7 +700,7 @@ export default function App() {
 
       {/* Mobile Sub-Navigation Bar */}
       <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-2 overflow-x-auto flex items-center gap-1.5 text-xs font-medium no-print">
-        {(['dashboard', 'patients', 'orders', 'billing', 'catalog', 'results'] as NavTab[]).map(tab => (
+        {(['dashboard', 'patients', 'appointments', 'orders', 'billing', 'catalog', 'results'] as NavTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setCurrentTab(tab)}
@@ -614,7 +710,7 @@ export default function App() {
                 : 'text-slate-600 bg-slate-100'
             }`}
           >
-            {tab === 'dashboard' ? 'Overview' : tab === 'catalog' ? '3. Catalog' : tab === 'billing' ? '2. Billing' : tab === 'orders' ? '4. Orders' : tab === 'patients' ? '1. Patients' : '5. Results'}
+            {tab === 'dashboard' ? 'Overview' : tab === 'appointments' ? `Appointments (${activeAppointmentsCount})` : tab === 'catalog' ? '3. Catalog' : tab === 'billing' ? '2. Billing' : tab === 'orders' ? '4. Orders' : tab === 'patients' ? '1. Patients' : '5. Results'}
           </button>
         ))}
       </div>
@@ -630,7 +726,7 @@ export default function App() {
             currentUser={currentUser}
             profile={labProfile}
             onOpenSettings={() => setShowSettingsModal(true)}
-            onOpenNewOrder={() => setShowNewOrderModal(true)}
+            onOpenNewOrder={openGenericNewOrderModal}
             onOpenNewPatient={() => setCurrentTab('patients')}
             onNavigateTab={(tab) => setCurrentTab(tab as NavTab)}
             onViewReceipt={(order) => setActiveReceiptOrder(order)}
@@ -645,16 +741,38 @@ export default function App() {
           <PatientsView
             patients={patients}
             orders={orders}
+            appointments={appointments}
             catalog={catalog}
             reports={reports}
             currentUser={currentUser}
             onAddPatient={handleAddPatient}
             onUpdatePatient={handleUpdatePatient}
             onBookOrderForPatient={(patient) => {
+              setOrderModalPatientId(patient.id);
               setShowNewOrderModal(true);
+            }}
+            onBookAppointmentForPatient={(patient) => {
+              openNewAppointmentModal(patient.id);
             }}
             onViewOrderReceipt={(order) => setActiveReceiptOrder(order)}
             onViewOrderReport={(order) => setActiveReportOrder(order)}
+          />
+        )}
+
+        {currentTab === 'appointments' && (
+          <AppointmentSchedulerView
+            appointments={appointments}
+            patients={patients}
+            catalog={catalog}
+            orders={orders}
+            currentUser={currentUser}
+            profile={labProfile}
+            onOpenNewAppointment={openNewAppointmentModal}
+            onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
+            onCheckInToOrder={handleCheckInToOrder}
+            onNavigateToPatient={(patientId) => {
+              setCurrentTab('patients');
+            }}
           />
         )}
 
@@ -666,7 +784,7 @@ export default function App() {
             reports={reports}
             currentUser={currentUser}
             onUpdateOrderStatus={handleUpdateOrderStatus}
-            onOpenNewOrder={() => setShowNewOrderModal(true)}
+            onOpenNewOrder={openGenericNewOrderModal}
             onViewReceipt={(order) => setActiveReceiptOrder(order)}
             onViewReport={(order) => setActiveReportOrder(order)}
             onEnterResults={(order) => {
@@ -727,8 +845,32 @@ export default function App() {
         <NewOrderModal
           patients={patients}
           catalog={catalog}
+          initialPatientId={orderModalPatientId}
+          initialTests={orderModalTests}
+          initialNotes={orderModalNotes}
           onSaveOrder={handleSaveNewOrder}
-          onClose={() => setShowNewOrderModal(false)}
+          onClose={() => {
+            setShowNewOrderModal(false);
+            setOrderModalPatientId(undefined);
+            setOrderModalTests(undefined);
+            setOrderModalNotes(undefined);
+            setActiveAppointmentToCheckIn(null);
+          }}
+        />
+      )}
+
+      {/* Appointment Booking Modal */}
+      {showNewAppointmentModal && (
+        <NewAppointmentModal
+          isOpen={showNewAppointmentModal}
+          onClose={() => {
+            setShowNewAppointmentModal(false);
+            setAppointmentInitialPatientId(undefined);
+          }}
+          patients={patients}
+          catalog={catalog}
+          initialPatientId={appointmentInitialPatientId}
+          onSaveAppointment={handleSaveAppointment}
         />
       )}
 

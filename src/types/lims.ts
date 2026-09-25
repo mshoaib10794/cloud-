@@ -126,6 +126,25 @@ export interface UserAccount {
   lastLogin?: string;
 }
 
+export type AppointmentStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled' | 'No Show';
+
+export type VisitType = 'Lab Visit / Walk-in' | 'Home Sample Collection';
+
+export interface LabAppointment {
+  id: string; // e.g. APT-2026-001
+  patientId: string; // Links directly to Patient.id
+  appointmentDate: string; // YYYY-MM-DD
+  timeSlot: string; // e.g. "09:00 AM"
+  visitType: VisitType;
+  requestedTests: string[]; // Test codes, e.g. ['CBC', 'LFT']
+  fastingRequired: boolean;
+  status: AppointmentStatus;
+  notes?: string;
+  convertedToOrderId?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
 export const INITIAL_STAFF_ACCOUNTS: UserAccount[] = [
   {
     id: 'USR-001',

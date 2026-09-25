@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Patient, LabOrder, Gender, UserAccount, TestCatalogItem, OrderResultReport } from '../types/lims';
+import { Patient, LabOrder, Gender, UserAccount, TestCatalogItem, OrderResultReport, LabAppointment } from '../types/lims';
 import { formatPKR, formatCNIC, formatPakistaniPhone, formatLabDate } from '../utils/formatters';
 import { downloadCSV } from '../utils/downloadHelpers';
 import { MedicalHistoryView } from './MedicalHistoryView';
@@ -7,12 +7,14 @@ import { MedicalHistoryView } from './MedicalHistoryView';
 interface PatientsViewProps {
   patients: Patient[];
   orders: LabOrder[];
+  appointments?: LabAppointment[];
   catalog?: TestCatalogItem[];
   reports?: OrderResultReport[];
   currentUser?: UserAccount;
   onAddPatient: (patient: Patient) => void;
   onUpdatePatient: (patient: Patient) => void;
   onBookOrderForPatient: (patient: Patient) => void;
+  onBookAppointmentForPatient?: (patient: Patient) => void;
   onViewOrderReceipt: (order: LabOrder) => void;
   onViewOrderReport: (order: LabOrder) => void;
 }
@@ -20,12 +22,14 @@ interface PatientsViewProps {
 export const PatientsView: React.FC<PatientsViewProps> = ({
   patients,
   orders,
+  appointments = [],
   catalog = [],
   reports = [],
   currentUser,
   onAddPatient,
   onUpdatePatient,
   onBookOrderForPatient,
+  onBookAppointmentForPatient,
   onViewOrderReceipt,
   onViewOrderReport
 }) => {
@@ -348,6 +352,15 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                               </svg>
                               Medical History
                             </button>
+                            {onBookAppointmentForPatient && (
+                              <button
+                                onClick={() => onBookAppointmentForPatient(pat)}
+                                title="Book advance lab appointment for this patient"
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded font-semibold transition-colors text-[11px] flex items-center gap-1"
+                              >
+                                📅 Appt
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setDrawerTab('orders');
@@ -638,6 +651,79 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                   {orders.filter(o => o.patientId === activePatientDrawer.id).length === 0 && (
                     <div className="p-4 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg">
                       No past lab orders for this patient.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Linked Advance Appointments */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📅 Advance Lab Appointments</span>
+                    <span className="px-1.5 py-0.2 bg-teal-100 text-teal-900 rounded-full font-mono text-[10px]">
+                      {appointments.filter(a => a.patientId === activePatientDrawer.id).length}
+                    </span>
+                  </h4>
+                  {onBookAppointmentForPatient && (
+                    <button
+                      onClick={() => {
+                        const p = activePatientDrawer;
+                        setActivePatientDrawer(null);
+                        onBookAppointmentForPatient(p);
+                      }}
+                      className="text-xs font-bold text-teal-700 hover:underline"
+                    >
+                      + Book New Visit
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {appointments
+                    .filter(a => a.patientId === activePatientDrawer.id)
+                    .map(apt => (
+                      <div
+                        key={apt.id}
+                        className="bg-white border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:border-slate-300"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-teal-800 text-[11px]">{apt.id}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="font-semibold text-slate-900">{apt.appointmentDate} · {apt.timeSlot}</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-slate-100 text-slate-700">
+                              {apt.visitType === 'Home Sample Collection' ? '🏠 Home' : '🏥 Lab'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 mt-0.5">
+                            Tests: <span className="font-mono font-medium">{apt.requestedTests.join(', ')}</span>
+                            {apt.fastingRequired && (
+                              <span className="ml-2 text-amber-700 font-bold text-[10px]">⚠️ Fasting (10-12h)</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                              apt.status === 'Completed'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : apt.status === 'Confirmed'
+                                ? 'bg-teal-50 text-teal-800 border-teal-200'
+                                : apt.status === 'Cancelled'
+                                ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                            }`}
+                          >
+                            {apt.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  {appointments.filter(a => a.patientId === activePatientDrawer.id).length === 0 && (
+                    <div className="p-3 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg text-[11px]">
+                      No advance appointments booked for this patient yet.
                     </div>
                   )}
                 </div>

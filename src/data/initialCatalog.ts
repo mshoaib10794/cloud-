@@ -1,4 +1,4 @@
-import { Patient, TestCatalogItem, LabOrder, OrderResultReport } from '../types/lims';
+import { Patient, TestCatalogItem, LabOrder, OrderResultReport, LabAppointment } from '../types/lims';
 
 export const INITIAL_TEST_CATALOG: TestCatalogItem[] = [
   {
@@ -1484,3 +1484,86 @@ export const INITIAL_REPORTS: OrderResultReport[] = [
     ]
   }
 ];
+
+export const INITIAL_APPOINTMENTS: LabAppointment[] = [
+  {
+    id: 'APT-2026-001',
+    patientId: 'PAT-2026-0001', // Muhammad Asif
+    appointmentDate: '2026-09-25',
+    timeSlot: '08:30 AM',
+    visitType: 'Lab Visit / Walk-in',
+    requestedTests: ['CBC', 'LFT'],
+    fastingRequired: true,
+    status: 'Confirmed',
+    notes: '12-hour overnight fasting advised for lipid & liver enzymes',
+    createdAt: '2026-09-24T14:30:00Z',
+    createdBy: 'Ayesha Khan (Reception)'
+  },
+  {
+    id: 'APT-2026-002',
+    patientId: 'PAT-2026-0002', // Fatima Zahra Bibi
+    appointmentDate: '2026-09-25',
+    timeSlot: '10:00 AM',
+    visitType: 'Home Sample Collection',
+    requestedTests: ['CBC', 'TSH'],
+    fastingRequired: false,
+    status: 'Scheduled',
+    notes: 'Home Phlebotomy: Apartment 4B, Gulberg Heights. Contact: 0321-9541280',
+    createdAt: '2026-09-24T16:15:00Z',
+    createdBy: 'Ayesha Khan (Reception)'
+  },
+  {
+    id: 'APT-2026-003',
+    patientId: 'PAT-2026-0003', // Chaudhry Kamran Akram
+    appointmentDate: '2026-09-26',
+    timeSlot: '09:00 AM',
+    visitType: 'Lab Visit / Walk-in',
+    requestedTests: ['LIPID', 'RFT', 'HBA1C'],
+    fastingRequired: true,
+    status: 'Scheduled',
+    notes: 'Routine quarterly diabetic and cardiac checkup',
+    createdAt: '2026-09-24T11:00:00Z',
+    createdBy: 'Online Patient Booking'
+  },
+  {
+    id: 'APT-2026-004',
+    patientId: 'PAT-2026-0011', // Hamza Bilal (Pediatric)
+    appointmentDate: '2026-09-26',
+    timeSlot: '11:30 AM',
+    visitType: 'Lab Visit / Walk-in',
+    requestedTests: ['CBC'],
+    fastingRequired: false,
+    status: 'Scheduled',
+    notes: 'Pediatric patient (7 yrs). Gentle butterfly needle requested by mother.',
+    createdAt: '2026-09-25T08:00:00Z',
+    createdBy: 'Ayesha Khan (Reception)'
+  },
+  {
+    id: 'APT-2026-005',
+    patientId: 'PAT-2026-0005', // Syed Moazzam Shah (Senior)
+    appointmentDate: '2026-09-27',
+    timeSlot: '08:00 AM',
+    visitType: 'Home Sample Collection',
+    requestedTests: ['LIPID', 'RFT'],
+    fastingRequired: true,
+    status: 'Scheduled',
+    notes: 'Senior citizen home collection. Rawalpindi Satellite Town.',
+    createdAt: '2026-09-24T18:20:00Z',
+    createdBy: 'Ayesha Khan (Reception)'
+  },
+  {
+    id: 'APT-2026-006',
+    patientId: 'PAT-2026-0004', // Zainab Noor
+    appointmentDate: '2026-09-24',
+    timeSlot: '09:30 AM',
+    visitType: 'Lab Visit / Walk-in',
+    requestedTests: ['CBC'],
+    fastingRequired: false,
+    status: 'Completed',
+    convertedToOrderId: 'ORD-9401',
+    notes: 'Patient checked in on time and sample drawn successfully.',
+    createdAt: '2026-09-23T15:00:00Z',
+    createdBy: 'Prof. Dr. Tariq Mahmood'
+  }
+];
+

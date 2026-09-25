@@ -5,6 +5,9 @@ import { formatPKR, formatCNIC, formatPakistaniPhone } from '../utils/formatters
 interface NewOrderModalProps {
   patients: Patient[];
   catalog: TestCatalogItem[];
+  initialPatientId?: string;
+  initialTests?: string[];
+  initialNotes?: string;
   onSaveOrder: (newOrder: LabOrder, newPatient?: Patient) => void;
   onClose: () => void;
 }
@@ -12,12 +15,15 @@ interface NewOrderModalProps {
 export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   patients,
   catalog,
+  initialPatientId,
+  initialTests,
+  initialNotes,
   onSaveOrder,
   onClose
 }) => {
   // Step / Tab: 'select_patient' | 'create_patient'
   const [patientMode, setPatientMode] = useState<'existing' | 'new'>('existing');
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(patients[0]?.id || '');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(initialPatientId || patients[0]?.id || '');
   const [patientSearch, setPatientSearch] = useState('');
 
   // New Patient Form state
@@ -32,13 +38,15 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const [referredBy, setReferredBy] = useState('');
 
   // Order Details state
-  const [selectedTests, setSelectedTests] = useState<string[]>(['CBC']);
+  const [selectedTests, setSelectedTests] = useState<string[]>(
+    initialTests && initialTests.length > 0 ? initialTests : ['CBC']
+  );
   const [testSearch, setTestSearch] = useState('');
   const [discountType, setDiscountType] = useState<'flat' | 'percentage'>('flat');
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [paidAmount, setPaidAmount] = useState<number>(0);
-  const [orderNotes, setOrderNotes] = useState('');
+  const [orderNotes, setOrderNotes] = useState(initialNotes || '');
   const [formError, setFormError] = useState<string | null>(null);
 
   // Generate unique order ID and sample barcode
